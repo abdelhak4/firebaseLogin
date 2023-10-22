@@ -30,6 +30,7 @@ import com.example.firebaselogin.presentation.sign_in.SignInScreen
 import com.example.firebaselogin.presentation.sign_in.SignInViewModel
 import com.example.firebaselogin.ui.theme.FirebaseLoginTheme
 import com.google.android.gms.auth.api.identity.Identity
+import com.google.firebase.FirebaseApp
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -40,9 +41,9 @@ class MainActivity : ComponentActivity() {
             oneTapClient = Identity.getSignInClient(applicationContext)
         )
     }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FirebaseApp.initializeApp(this);
         setContent {
             FirebaseLoginTheme {
                 // A surface container using the 'background' color from the theme
@@ -52,7 +53,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
                     NavHost(navController = navController, startDestination = "Sign_in") {
-                        composable("sign_in") {
+                        composable("Sign_in") {
                             val viewModel= viewModel<SignInViewModel>()
                             val state by viewModel.state.collectAsStateWithLifecycle()
 
