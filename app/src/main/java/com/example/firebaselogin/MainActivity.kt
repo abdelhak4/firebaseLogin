@@ -26,6 +26,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.firebaselogin.presentation.sign_in.GoogleAuthUiClient
+import com.example.firebaselogin.presentation.sign_in.ProfileScreen
 import com.example.firebaselogin.presentation.sign_in.SignInScreen
 import com.example.firebaselogin.presentation.sign_in.SignInViewModel
 import com.example.firebaselogin.ui.theme.FirebaseLoginTheme
@@ -35,12 +36,13 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
-    private val  googleAuthUiClient by lazy {
+    private val googleAuthUiClient by lazy {
         GoogleAuthUiClient(
             context = applicationContext,
             oneTapClient = Identity.getSignInClient(applicationContext)
         )
     }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this);
@@ -54,14 +56,19 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     NavHost(navController = navController, startDestination = "Sign_in") {
                         composable("Sign_in") {
-                            val viewModel= viewModel<SignInViewModel>()
+                            val viewModel = viewModel<SignInViewModel>()
                             val state by viewModel.state.collectAsStateWithLifecycle()
+
+                            LaunchedEffect(key1 = Unit) {
+                                if (googleAuthUiClient.getSingedInUser() != null) {
+                                    navController.navigate("profile")
+                                }
+                            }
 
                             val launcher = rememberLauncherForActivityResult(
                                 contract = ActivityResultContracts.StartIntentSenderForResult(),
-                                onResult = {result ->
-                                    if (result.resultCode == RESULT_OK)
-                                    {
+                                onResult = { result ->
+                                    if (result.resultCode == RESULT_OK) {
                                         lifecycleScope.launch {
                                             val signInResult = googleAuthUiClient.signInWithIntent(
                                                 intent = result.data ?: return@launch
@@ -73,28 +80,44 @@ class MainActivity : ComponentActivity() {
                             )
 
                             LaunchedEffect(key1 = state.isSignInSuccessful) {
-                                if (state.isSignInSuccessful)
-                                {
+                                if (state.isSignInSuccessful) {
                                     Toast.makeText(
-                                        applicationContext,
-                                        "Sign in s",
+                                        applicationContext, 
+                                        "Sign in done",
                                         Toast.LENGTH_LONG
                                     ).show()
+                                    navController.navigate("profile")
+                                    viewModel.resetState()
                                 }
                             }
 
-                           SignInScreen(state = state, onSignInClick = {
-                               lifecycleScope.launch {
-                                   val signInIntentSender = googleAuthUiClient.signIn()
-                                   launcher.launch(
-                                       IntentSenderRequest.Builder(
-                                           signInIntentSender ?: return@launch
-                                       ).build()
-                                   )
-                               }
-                           })
+                            SignInScreen(state = state, onSignInClick = {
+                                lifecycleScope.launch {
+                                    val signInIntentSender = googleAuthUiClient.signIn()
+                                    launcher.launch(
+                                        IntentSenderRequest.Builder(
+                                            signInIntentSender ?: return@launch
+                                        ).build()
+                                    )
+                                }
+                            })
 
 
+                        }
+                        composable("profile") {
+                            ProfileScreen(
+                                userData = googleAuthUiClient.getSingedInUser()
+                            ) {
+                                lifecycleScope.launch {
+                                    googleAuthUiClient.signOut()
+                                    Toast.makeText(
+                                        applicationContext,
+                                        "Signed out",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    navController.popBackStack()
+                                }
+                            }
                         }
                     }
                 }
